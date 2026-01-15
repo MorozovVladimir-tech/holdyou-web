@@ -2,37 +2,25 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 
-export default function ConfirmedPage() {
-  const [triedAutoOpen, setTriedAutoOpen] = useState(false);
+export default function ResetPasswordPage() {
   const [autoOpenFailed, setAutoOpenFailed] = useState(false);
 
-  // Собираем всё, что пришло в URL (query + hash) и прокидываем в deep link
-  // Это полезно, если Supabase добавит параметры/хэши (сейчас может быть пусто — ок).
-  const currentUrl = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return window.location.href;
-  }, []);
-
   const deepLink = useMemo(() => {
-    if (typeof window === "undefined") return "holdyou://confirmed";
+    if (typeof window === "undefined") return "holdyou://reset-password";
 
     const url = new URL(window.location.href);
 
-    // query string
+    // Supabase обычно шлёт параметры в query или hash. Берём всё.
     const qs = url.searchParams.toString();
-
-    // hash (без #)
     const hash = url.hash ? url.hash.substring(1) : "";
 
-    // собираем payload
     const parts: string[] = [];
     if (qs) parts.push(qs);
     if (hash) parts.push(hash);
 
     const payload = parts.length ? `?${encodeURIComponent(parts.join("&"))}` : "";
 
-    // Основная точка входа в приложение для “email confirmed”
-    return `holdyou://confirmed${payload}`;
+    return `holdyou://reset-password${payload}`;
   }, []);
 
   const styles: Record<string, React.CSSProperties> = {
@@ -47,10 +35,10 @@ export default function ConfirmedPage() {
     },
     content: {
       textAlign: "center",
-      maxWidth: 360,
+      maxWidth: 380,
     },
     title: {
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: 700,
       marginBottom: 8,
       lineHeight: 1.15,
@@ -70,8 +58,8 @@ export default function ConfirmedPage() {
       paddingTop: 8,
     },
     buttonBase: {
-      width: 168,
-      height: 32,
+      width: 190,
+      height: 34,
       borderRadius: 8,
       border: "1px solid #00B8D9",
       background: "#000000",
@@ -106,16 +94,6 @@ export default function ConfirmedPage() {
       padding: "10px 12px",
       background: "rgba(255,255,255,0.04)",
     },
-    heart: {
-      color: "#059677",
-    },
-    smallMono: {
-      marginTop: 10,
-      fontSize: 10,
-      color: "rgba(255,255,255,0.35)",
-      wordBreak: "break-all",
-      lineHeight: 1.4,
-    },
   };
 
   const pressHandlers = {
@@ -137,36 +115,21 @@ export default function ConfirmedPage() {
   };
 
   useEffect(() => {
-    // Авто-открытие делаем один раз.
-    if (triedAutoOpen) return;
-
-    setTriedAutoOpen(true);
-
-    // 1) Пробуем открыть через scheme
-    // 2) Если спустя ~1200мс страница всё ещё активна — считаем что не открылось, показываем подсказку
-    const timer = window.setTimeout(() => {
-      setAutoOpenFailed(true);
-    }, 1200);
-
-    // NOTE: на iOS это наиболее стандартная попытка
-    // Если Universal Links будут настроены позже — можно будет открыть через https-ссылку на отдельный /open
-    // Сейчас схема нужна для 100% предсказуемости.
+    // Авто-открытие при заходе с письма
+    const t = window.setTimeout(() => setAutoOpenFailed(true), 1200);
     window.location.href = deepLink;
-
-    return () => window.clearTimeout(timer);
-  }, [deepLink, triedAutoOpen]);
+    return () => window.clearTimeout(t);
+  }, [deepLink]);
 
   return (
     <main style={styles.screen}>
       <div style={styles.content}>
-        <h1 style={styles.title}>
-          Email confirmed <span style={styles.heart}>💚</span>
-        </h1>
+        <h1 style={styles.title}>Reset password</h1>
 
         <p style={styles.subtitle}>
-          Your email has been successfully confirmed.
+          We’re opening the HoldYou app so you can set a new password.
           <br />
-          You can now return to the HoldYou app.
+          If it doesn’t open, tap the button below.
         </p>
 
         <div style={styles.footer}>
@@ -176,26 +139,18 @@ export default function ConfirmedPage() {
         </div>
 
         <p style={styles.hint}>
-          If the app doesn’t open automatically, tap the button above.
+          If nothing happens, make sure HoldYou is installed (TestFlight).
         </p>
 
         {autoOpenFailed && (
           <div style={styles.warn}>
-            If nothing happens:
+            If the app didn’t open:
             <br />
-            1) Make sure HoldYou is installed (TestFlight)
+            1) Install HoldYou (TestFlight)
             <br />
-            2) Return to the app and press <b>I’ve confirmed</b>
+            2) Return to HoldYou and try again
           </div>
         )}
-
-        {/* Техническая инфа для дебага — можно убрать позже */}
-        <div style={styles.smallMono}>
-          <div>Deep link:</div>
-          <div>{deepLink}</div>
-          <div style={{ marginTop: 6 }}>Current URL:</div>
-          <div>{currentUrl}</div>
-        </div>
       </div>
     </main>
   );
