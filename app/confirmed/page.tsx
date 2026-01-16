@@ -1,39 +1,27 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+
+function buildDeepLink(path: string) {
+  if (typeof window === "undefined") return `holdyou:///${path}`;
+
+  const url = new URL(window.location.href);
+
+  const params = new URLSearchParams(url.search);
+
+  if (url.hash && url.hash.length > 1) {
+    const hashParams = new URLSearchParams(url.hash.substring(1));
+    hashParams.forEach((value, key) => params.set(key, value));
+  }
+
+  const qs = params.toString();
+  return `holdyou:///${path}${qs ? `?${qs}` : ""}`;
+}
 
 export default function ConfirmedPage() {
-  const [triedAutoOpen, setTriedAutoOpen] = useState(false);
-  const [autoOpenFailed, setAutoOpenFailed] = useState(false);
+  const [tried, setTried] = useState(false);
 
-  // Собираем всё, что пришло в URL (query + hash) и прокидываем в deep link
-  // Это полезно, если Supabase добавит параметры/хэши (сейчас может быть пусто — ок).
-  const currentUrl = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return window.location.href;
-  }, []);
-
-  const deepLink = useMemo(() => {
-    if (typeof window === "undefined") return "holdyou://confirmed";
-
-    const url = new URL(window.location.href);
-
-    // query string
-    const qs = url.searchParams.toString();
-
-    // hash (без #)
-    const hash = url.hash ? url.hash.substring(1) : "";
-
-    // собираем payload
-    const parts: string[] = [];
-    if (qs) parts.push(qs);
-    if (hash) parts.push(hash);
-
-    const payload = parts.length ? `?${encodeURIComponent(parts.join("&"))}` : "";
-
-    // Основная точка входа в приложение для “email confirmed”
-    return `holdyou://confirmed${payload}`;
-  }, []);
+  const deepLink = useMemo(() => buildDeepLink("confirmed"), []);
 
   const styles: Record<string, React.CSSProperties> = {
     screen: {
@@ -41,20 +29,12 @@ export default function ConfirmedPage() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "#000000",
-      color: "#FFFFFF",
+      background: "#000",
+      color: "#fff",
       padding: 18,
     },
-    content: {
-      textAlign: "center",
-      maxWidth: 360,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 700,
-      marginBottom: 8,
-      lineHeight: 1.15,
-    },
+    content: { textAlign: "center", maxWidth: 380 },
+    title: { fontSize: 26, fontWeight: 800, marginBottom: 8, lineHeight: 1.15 },
     subtitle: {
       fontSize: 13,
       fontWeight: 500,
@@ -70,13 +50,13 @@ export default function ConfirmedPage() {
       paddingTop: 8,
     },
     buttonBase: {
-      width: 168,
-      height: 32,
-      borderRadius: 8,
+      width: 200,
+      height: 36,
+      borderRadius: 10,
       border: "1px solid #00B8D9",
-      background: "#000000",
-      color: "#FFFFFF",
-      display: "flex",
+      background: "#000",
+      color: "#fff",
+      display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       textDecoration: "none",
@@ -85,76 +65,34 @@ export default function ConfirmedPage() {
       boxShadow: "0 0 10px rgba(0,184,217,0.40)",
       transition: "opacity 120ms ease",
     },
-    buttonText: {
-      fontSize: 13,
-      fontWeight: 600,
-      color: "#FFFFFF",
-    },
-    hint: {
-      marginTop: 12,
-      fontSize: 10,
-      color: "rgba(255,255,255,0.55)",
-      lineHeight: 1.5,
-    },
+    buttonText: { fontSize: 13, fontWeight: 700, color: "#fff" },
+    hint: { marginTop: 12, fontSize: 10, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 },
     warn: {
       marginTop: 10,
       fontSize: 11,
       color: "rgba(255,255,255,0.75)",
       lineHeight: 1.5,
       border: "1px solid rgba(255,255,255,0.18)",
-      borderRadius: 10,
+      borderRadius: 12,
       padding: "10px 12px",
       background: "rgba(255,255,255,0.04)",
+      textAlign: "left",
     },
-    heart: {
-      color: "#059677",
-    },
-    smallMono: {
-      marginTop: 10,
-      fontSize: 10,
-      color: "rgba(255,255,255,0.35)",
-      wordBreak: "break-all",
-      lineHeight: 1.4,
-    },
+    heart: { color: "#059677" },
   };
 
   const pressHandlers = {
-    onMouseDown: (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.opacity = "0.8";
-    },
-    onMouseUp: (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.opacity = "1";
-    },
-    onMouseLeave: (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.opacity = "1";
-    },
-    onTouchStart: (e: React.TouchEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.opacity = "0.8";
-    },
-    onTouchEnd: (e: React.TouchEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.opacity = "1";
-    },
+    onMouseDown: (e: React.MouseEvent<HTMLAnchorElement>) => (e.currentTarget.style.opacity = "0.85"),
+    onMouseUp: (e: React.MouseEvent<HTMLAnchorElement>) => (e.currentTarget.style.opacity = "1"),
+    onMouseLeave: (e: React.MouseEvent<HTMLAnchorElement>) => (e.currentTarget.style.opacity = "1"),
+    onTouchStart: (e: React.TouchEvent<HTMLAnchorElement>) => (e.currentTarget.style.opacity = "0.85"),
+    onTouchEnd: (e: React.TouchEvent<HTMLAnchorElement>) => (e.currentTarget.style.opacity = "1"),
   };
 
-  useEffect(() => {
-    // Авто-открытие делаем один раз.
-    if (triedAutoOpen) return;
-
-    setTriedAutoOpen(true);
-
-    // 1) Пробуем открыть через scheme
-    // 2) Если спустя ~1200мс страница всё ещё активна — считаем что не открылось, показываем подсказку
-    const timer = window.setTimeout(() => {
-      setAutoOpenFailed(true);
-    }, 1200);
-
-    // NOTE: на iOS это наиболее стандартная попытка
-    // Если Universal Links будут настроены позже — можно будет открыть через https-ссылку на отдельный /open
-    // Сейчас схема нужна для 100% предсказуемости.
-    window.location.href = deepLink;
-
-    return () => window.clearTimeout(timer);
-  }, [deepLink, triedAutoOpen]);
+  const onOpen = () => {
+    setTried(true);
+    window.location.href = deepLink; // только по клику
+  };
 
   return (
     <main style={styles.screen}>
@@ -170,32 +108,22 @@ export default function ConfirmedPage() {
         </p>
 
         <div style={styles.footer}>
-          <a href={deepLink} style={styles.buttonBase} {...pressHandlers}>
+          <a href={deepLink} onClick={onOpen} style={styles.buttonBase} {...pressHandlers}>
             <span style={styles.buttonText}>Open HoldYou app</span>
           </a>
         </div>
 
-        <p style={styles.hint}>
-          If the app doesn’t open automatically, tap the button above.
-        </p>
+        <p style={styles.hint}>Read the message above, then tap the button.</p>
 
-        {autoOpenFailed && (
+        {tried && (
           <div style={styles.warn}>
-            If nothing happens:
+            If the app didn’t open:
             <br />
-            1) Make sure HoldYou is installed (TestFlight)
+            1) Install HoldYou (TestFlight)
             <br />
-            2) Return to the app and press <b>I’ve confirmed</b>
+            2) Come back here and tap again
           </div>
         )}
-
-        {/* Техническая инфа для дебага — можно убрать позже */}
-        <div style={styles.smallMono}>
-          <div>Deep link:</div>
-          <div>{deepLink}</div>
-          <div style={{ marginTop: 6 }}>Current URL:</div>
-          <div>{currentUrl}</div>
-        </div>
       </div>
     </main>
   );
